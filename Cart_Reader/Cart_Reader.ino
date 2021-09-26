@@ -4,8 +4,8 @@
    This project represents a community-driven effort to provide
    an easy to build and easy to modify cartridge dumper.
 
-   Date:             02.08.2021
-   Version:          6.6
+   Date:             25.09.2021
+   Version:          6.7
 
    SD lib: https://github.com/greiman/SdFat
    LCD lib: https://github.com/adafruit/Adafruit_SSD1306
@@ -40,7 +40,7 @@
 
 **********************************************************************************/
 
-char ver[5] = "6.6";
+char ver[5] = "6.7";
 
 /******************************************
    Libraries
@@ -111,6 +111,23 @@ typedef enum COLOR_T {
   white_color,
 } color_t;
 
+// RTC Library
+#ifdef RTC_installed
+#include "RTClib.h"
+RTC_DS3231 rtc;
+
+// Callback for file timestamps
+void dateTime(uint16_t* date, uint16_t* time) {
+  DateTime now = rtc.now();
+
+  // Return date using FAT_DATE macro to format fields
+  *date = FAT_DATE(now.year(), now.month(), now.day());
+
+  // Return time using FAT_TIME macro to format fields
+  *time = FAT_TIME(now.hour(), now.minute(), now.second());
+}
+#endif
+
 /******************************************
   Defines
  *****************************************/
@@ -138,6 +155,7 @@ typedef enum COLOR_T {
 #define mode_GB_GBSmart_Game 20
 #define mode_WS 21
 #define mode_NGP 22
+#define mode_RTC 23
 
 // optimization-safe nop delay
 #define NOP __asm__ __volatile__ ("nop\n\t")
@@ -635,6 +653,14 @@ void setup() {
 
   // Read current folder number out of eeprom
   EEPROM_readAnything(0, foldern);
+
+#ifdef RTC_installed
+rtc.begin();
+// Set RTC to Date/Time of Sketch Build
+rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+// Set Date/Time Callback Funtion
+SdFile::dateTimeCallback(dateTime);
+#endif
 
 #ifdef enable_OLED
   // GLCD
